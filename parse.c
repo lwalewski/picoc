@@ -779,11 +779,43 @@ enum ParseResult ParseStatement(struct ParseState *Parser, int CheckTrailingSemi
             
 #ifndef NO_HASH_INCLUDE
         case TokenHashInclude:
-            if (LexGetToken(Parser, &LexerValue, TRUE) != TokenStringConstant)
-                ProgramFail(Parser, "\"filename.h\" expected");
-            
-            IncludeFile(Parser->pc, (char *)LexerValue->Val->Pointer);
-            CheckTrailingSemicolon = FALSE;
+            {
+                char *FileName;
+                enum LexToken NextToken = LexGetToken(Parser, &LexerValue, TRUE);
+
+                switch (NextToken) {
+                case TokenStringConstant:
+                    FileName = (char *)LexerValue->Val->Pointer;
+                    break;
+                case TokenIdentifier:
+                    {
+                        struct Value *Val, *Res;
+                        struct ParseState MacroParser;
+                        if (VariableDefined(Parser->pc, (char *)LexerValue->Val->Pointer)) {
+                            VariableGet(Parser->pc, Parser, (char *)LexerValue->Val->Pointer, &Val);
+                            if (Val->Typ->Base == TypeMacro) {
+                                ParserCopy(&MacroParser, &Val->Val->MacroDef.Body);
+                                MacroParser.Mode = Parser->Mode;
+                                if (ExpressionParse(&MacroParser, &Res)){
+                                    FileName = (char *)Res->Val->Pointer;
+                                } else {
+                                    ProgramFail(Parser, "could not parse");
+                                }
+                            } else {
+                                ProgramFail(Parser, "macro expected");
+                            }
+                        } else {
+                            ProgramFail(Parser, "identifier not defined");
+                        }
+                    }
+                    break;
+                default:
+                    ProgramFail(Parser, "filename or identifier expected");
+                    break;
+                }
+                IncludeFile(Parser->pc, FileName);
+                CheckTrailingSemicolon = FALSE;
+            }
             break;
 #endif
 

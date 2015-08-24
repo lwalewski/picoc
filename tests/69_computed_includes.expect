@@ -1,0 +1,4 @@
+defined MY_INCLUDE = '69_computed_includes.h'
+including MY_INCLUDE
+inside 69_computed_includes.h
+done including MY_INCLUDE
