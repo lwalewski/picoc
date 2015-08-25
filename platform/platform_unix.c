@@ -119,16 +119,25 @@ char *PlatformReadFile(Picoc *pc, const char *FileName)
 /* read and scan a file for definitions */
 void PicocPlatformScanFile(Picoc *pc, const char *FileName)
 {
-    char *SourceStr = PlatformReadFile(pc, FileName);
+    char *SourceStr;
 
-    /* ignore "#!/path/to/picoc" .. by replacing the "#!" with "//" */
-    if (SourceStr != NULL && SourceStr[0] == '#' && SourceStr[1] == '!') 
-    { 
-        SourceStr[0] = '/'; 
-        SourceStr[1] = '/'; 
+    /* protect against multiple inclusion */
+    if (!VariableDefined(pc, FileName))
+    {
+        VariableDefine(pc, NULL, (char *) FileName, NULL, &pc->VoidType, FALSE);
+
+        SourceStr = PlatformReadFile(pc, FileName);
+
+        /* ignore "#!/path/to/picoc" .. by replacing the "#!" with "//" */
+        if (SourceStr != NULL && SourceStr[0] == '#' && SourceStr[1] == '!')
+        {
+            SourceStr[0] = '/';
+            SourceStr[1] = '/';
+        }
+
+        PicocParse(pc, FileName, SourceStr, strlen(SourceStr), TRUE, FALSE, TRUE, TRUE);
     }
 
-    PicocParse(pc, FileName, SourceStr, strlen(SourceStr), TRUE, FALSE, TRUE, TRUE);
 }
 
 /* exit the program */
